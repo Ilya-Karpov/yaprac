@@ -5,9 +5,9 @@ import torch
 import numpy as np
 import pandas as pd
 
-from sklearn.model_selection import train_test_split
+#from sklearn.model_selection import train_test_split
 from torch.utils.data import Dataset, DataLoader
-from transformers import BertTokenizerFast
+
 
 special_chars = (
     ("à", "a"),
@@ -72,22 +72,37 @@ def clean_string(text):
     
     return text
 
-tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
+class TextDataset(Dataset):
+    def __init__(self, input_ids, attention_mask):
+        self.input_ids = input_ids
+        self.attention_mask = attention_mask
+    
+    def __len__(self):
+        return len(self.input_ids)
+    
+    def __getitem__(self, idx):
+        return {
+            'input_ids': self.input_ids[idx],
+            'attention_mask': self.attention_mask[idx]
+        }
+    
+# добавить lengths???
+def collate_fn(batch):
+    # список текстов и классов из батча
+    texts = [item['text'] for item in batch]
+    attention_mask = [item['attention_mask'] for item in batch]
 
-def to_tokenizer(dataframe):
-    tokenized_lengths = []
-    for text in dataframe['clean_text'].head(10000):
-        tokens = tokenizer.tokenize(text)
-        tokenized_lengths.append(len(tokens))
+    input_ids_stack = torch.stack(texts)
+    attention_mask_stack = torch.stack(attention_mask)
 
-    MAX_LENGTH = int(np.percentile(tokenized_lengths, 95))
+    input_ids_input = input_ids_stack[:, :-1]
+    input_ids_target = input_ids_stack[:, 1:]
 
-    encoded = tokenizer(
-        dataframe['clean_text'].tolist(),
-        padding='max_length',
-        truncation=True,
-        max_length=MAX_LENGTH,
-        return_tensors='pt'
-    )
+    attention_mask_input = attention_mask_stack[:, :-1]
 
-    return encoded
+    # возвращаем преобразованный батч
+    return {
+        'input_ids': input_ids_input,
+        'target_ids': input_ids_target,
+        'attention_mask': attention_mask_input
+    }
