@@ -89,10 +89,10 @@ class TextDataset(Dataset):
 # добавить lengths???
 def collate_fn(batch):
     # список текстов и классов из батча
-    texts = [item['text'] for item in batch]
+    input_ids = [item['input_ids'] for item in batch]
     attention_mask = [item['attention_mask'] for item in batch]
 
-    input_ids_stack = torch.stack(texts)
+    input_ids_stack = torch.stack(input_ids)
     attention_mask_stack = torch.stack(attention_mask)
 
     input_ids_input = input_ids_stack[:, :-1]
